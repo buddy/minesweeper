@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Minesweeper · AI agent benchmark</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%2310b981%27/%3E%3Ccircle cx=%2716%27 cy=%2718%27 r=%278%27 fill=%27%230f172a%27/%3E%3Crect x=%2714%27 y=%274%27 width=%274%27 height=%278%27 fill=%27%230f172a%27/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="ambient-mines" aria-hidden="true" inert><div class="ambient-field"></div><div class="ambient-field"></div></div>
+  <main id="intro" class="intro-view">
+    <header class="studio-header">
+      <a class="studio-brand" href="./" aria-label="Minesweeper home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Minesweeper<span class="brand-divider">/</span><span class="brand-descriptor">AI benchmark</span></a>
+    </header>
+    <div class="intro-heading">
+      <h1>A level playing field.<br><span>For artificial intelligence.</span></h1>
+      <p class="intro-description">Put AI models to the test in Minesweeper.<br>Compare their decisions, speed and cost, side by side.</p>
+    </div>
+    <div class="setup-section-heading"><h2><span class="color-chip chip-green" aria-hidden="true"></span>01 / Choose your models</h2><span>Up to nine. One shared board.</span></div>
+    <section class="model-table" aria-label="Models in this run">
+      <div class="model-table-head"><span>Model</span><span title="Input / output price per million tokens">Input / output · $/M</span><span>Reasoning</span><span></span></div>
+      <div id="model-rows"></div>
+      <div class="model-table-foot">
+        <button type="button" id="btn-add-model" class="btn btn-ghost btn-add" popovertarget="add-model-menu" aria-label="Add a model"><span aria-hidden="true">+</span> Add model</button>
+        <span id="selection-hint" class="intro-hint"></span>
+      </div>
+      <div id="add-model-menu" class="add-menu" popover></div>
+    </section>
+    <section class="board-picker" aria-label="Board size">
+      <h2 class="board-label"><span class="color-chip chip-purple" aria-hidden="true"></span>02 / Set the board</h2>
+      <div class="board-dimensions">
+        <label class="board-dimension" for="board-rows">Rows: <input id="board-rows" class="board-input" type="number" min="10" max="32" step="1" aria-label="Rows" /></label>
+        <label class="board-dimension" for="board-cols">Columns: <input id="board-cols" class="board-input" type="number" min="10" max="52" step="1" aria-label="Columns" /></label>
+        <label class="board-dimension" for="board-mines">Mines: <input id="board-mines" class="board-input" type="number" step="1" aria-label="Mines" /></label>
+      </div>
+    </section>
+    <div class="intro-actions">
+      <h2 class="action-label"><span class="color-chip chip-blue" aria-hidden="true"></span>03 / Let the models play</h2>
+      <button id="btn-start-run" class="btn btn-primary btn-large">Start run <span aria-hidden="true">↗</span></button>
+    </div>
+    <p id="intro-error" class="intro-error" role="alert" hidden></p>
+    <footer class="studio-footer"><span>Minesweeper / AI agent benchmark</span><span>Independent runs. Visible results.</span></footer>
+  </main>
+
+  <main id="workspace" class="workspace" hidden aria-label="Benchmark stage">
+    <aside id="session-panel" class="panel session-panel" hidden></aside>
+  </main>
+
+  <main id="results" class="results-view" hidden aria-label="Run results">
+    <header class="studio-header">
+      <a class="studio-brand" href="./" aria-label="Minesweeper home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Minesweeper<span class="brand-divider">/</span><span class="brand-descriptor">AI benchmark</span></a>
+      <span class="results-actions"><button type="button" id="btn-show-boards" class="btn btn-ghost">Show boards</button><button type="button" id="btn-results-back" class="btn btn-ghost">Choose models</button></span>
+    </header>
+    <div class="setup-section-heading"><h2><span class="color-chip chip-green" aria-hidden="true"></span>Reveal speed</h2><span id="results-board" class="intro-hint"></span></div>
+    <section class="results-chart" aria-label="Share of the board revealed over time">
+      <div id="results-plot" class="results-plot">
+        <div id="chart-svg" class="chart-svg"></div>
+        <div id="chart-guide" class="chart-guide" hidden></div>
+        <div id="chart-tooltip" class="chart-tooltip" role="status" hidden></div>
+      </div>
+      <ul id="results-legend" class="results-legend"></ul>
+    </section>
+    <div class="setup-section-heading"><h2><span class="color-chip chip-purple" aria-hidden="true"></span>Final standings</h2></div>
+    <section class="results-table-scroll" aria-label="Per-model figures">
+      <table class="results-table">
+        <thead>
+          <tr><th scope="col" aria-sort="none"><button type="button" class="results-sort" data-sort="label">Model</button></th><th scope="col" aria-sort="none"><button type="button" class="results-sort" data-sort="revealed">Revealed</button></th><th scope="col" aria-sort="none"><button type="button" class="results-sort" data-sort="ms">Time</button></th><th scope="col" aria-sort="none"><button type="button" class="results-sort" data-sort="costUsd">Cost</button></th><th scope="col" aria-sort="none"><button type="button" class="results-sort" data-sort="turns">Turns</button></th><th scope="col" aria-sort="none"><button type="button" class="results-sort" data-sort="moves">Moves</button></th><th scope="col" aria-sort="none"><button type="button" class="results-sort" data-sort="msPerMove">Avg / move</button></th></tr>
+        </thead>
+        <tbody id="results-rows"></tbody>
+      </table>
+    </section>
+    <footer class="studio-footer"><span>Minesweeper / AI agent benchmark</span><span>Independent runs. Visible results.</span></footer>
+  </main>
+
+  <template id="model-row-template">
+    <div class="model-row">
+      <div class="model-choice">
+        <span class="model-logo" aria-hidden="true"></span>
+        <span class="model-name" aria-hidden="true"></span>
+        <span class="select-chevron" aria-hidden="true"></span>
+        <button type="button" class="model-select" aria-label="Model" aria-haspopup="menu" aria-expanded="false"></button>
+      </div>
+      <span class="model-price"></span>
+      <div class="effort-choice"><button type="button" class="model-effort" aria-label="Reasoning effort" aria-haspopup="menu" aria-expanded="false"></button><span class="select-chevron" aria-hidden="true"></span></div>
+      <button type="button" class="model-remove" aria-label="Remove this model">×</button>
+    </div>
+  </template>
+
+  <template id="lane-template">
+    <section class="panel lane">
+      <header class="lane-head">
+        <span class="lane-logo"></span>
+        <h2 class="lane-name"></h2>
+        <button type="button" class="lane-log-toggle" aria-pressed="false">Logs</button>
+        <span class="lane-status"></span>
+      </header>
+      <div class="lane-stage">
+        <div class="lane-frame"><div class="lane-board"></div></div>
+        <div class="lane-log" hidden aria-live="off"></div>
+      </div>
+      <dl class="lane-stats">
+        <div><dt>Turns</dt><dd><span class="stat-turns">0</span><small class="stat-rate stat-turns-rate" hidden>(<span class="rate-value"></span>/min)</small></dd></div>
+        <div><dt>Moves</dt><dd><span class="stat-moves">0</span><small class="stat-rate stat-moves-rate" hidden>(<span class="rate-value"></span>/min)</small></dd></div>
+        <div><dt>Time</dt><dd class="stat-time">0:00</dd></div>
+        <div><dt>Est. cost</dt><dd class="stat-cost">$0.00</dd></div>
+      </dl>
+    </section>
+  </template>
+
+  <div id="countdown" class="countdown" role="status" aria-live="polite" hidden><span id="countdown-number">3</span><p id="countdown-label">Run starts in</p></div>
+  <button id="btn-controls" class="controls-access" aria-keyshortcuts="," aria-label="Open session controls" hidden>Controls</button>
+  <button type="button" id="btn-show-results" class="stage-access" hidden>Results ↗</button>
+  <dialog id="controls-dialog" class="controls-dialog" aria-labelledby="controls-title">
+    <form method="dialog">
+      <div class="dialog-header"><h2 id="controls-title">Session controls</h2><button class="btn btn-ghost" value="close">Done</button></div>
+      <div class="session-controls">
+        <div class="run-controls">
+          <button type="button" id="btn-start" class="btn btn-primary">Run again</button>
+          <button type="button" id="btn-stop" class="btn btn-danger" hidden disabled>Stop run</button>
+          <button type="button" id="btn-home" class="btn btn-ghost">Choose models</button>
+        </div>
+        <p id="run-status" role="status">Ready</p>
+        <p id="run-error" role="alert" hidden></p>
+        <p class="controls-shortcuts">Space: pause · Esc: choose models · N: new board</p>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
